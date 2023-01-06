@@ -152,6 +152,11 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
 
+    # print eval results, detailed
+    parser.add_argument('--write_eval_file', type=str, default=None)
+    
+    parser.add_argument('--keep_orig_ratio', type=float, default=None)
+
     return parser
 
 
@@ -300,7 +305,7 @@ def main(args):
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if args.eval:
-        test_stats = evaluate(data_loader_val, model, device)
+        test_stats = evaluate(data_loader_val, model, device, args.write_eval_file)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
         exit(0)
 
@@ -322,11 +327,11 @@ def main(args):
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=epoch)
 
-        test_stats = evaluate(data_loader_val, model, device)
+        test_stats = evaluate(data_loader_val, model, device, args.write_eval_file)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
         max_accuracy = max(max_accuracy, test_stats["acc1"])
         print(f'Max accuracy: {max_accuracy:.2f}%')
-
+         
         if log_writer is not None:
             log_writer.add_scalar('perf/test_acc1', test_stats['acc1'], epoch)
             log_writer.add_scalar('perf/test_acc5', test_stats['acc5'], epoch)
@@ -351,6 +356,7 @@ def main(args):
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
+    
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)

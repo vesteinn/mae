@@ -19,12 +19,12 @@ import submitit
 def parse_args():
     classification_parser = classification.get_args_parser()
     parser = argparse.ArgumentParser("Submitit for MAE finetune", parents=[classification_parser])
-    parser.add_argument("--ngpus", default=8, type=int, help="Number of gpus to request on each node")
-    parser.add_argument("--nodes", default=2, type=int, help="Number of nodes to request")
-    parser.add_argument("--timeout", default=4320, type=int, help="Duration of the job")
+    parser.add_argument("--ngpus", default=1, type=int, help="Number of gpus to request on each node")
+    parser.add_argument("--nodes", default=1, type=int, help="Number of nodes to request")
+    parser.add_argument("--timeout", default=900, type=int, help="Duration of the job")
     parser.add_argument("--job_dir", default="", type=str, help="Job dir. Leave empty for automatic.")
 
-    parser.add_argument("--partition", default="learnfair", type=str, help="Partition where to submit")
+    parser.add_argument("--partition", default="dp-esb", type=str, help="Partition where to submit")
     parser.add_argument("--use_volta32", action='store_true', help="Request 32G V100 GPUs")
     parser.add_argument('--comment', default="", type=str, help="Comment to pass to scheduler")
     return parser.parse_args()
@@ -32,8 +32,9 @@ def parse_args():
 
 def get_shared_folder() -> Path:
     user = os.getenv("USER")
-    if Path("/checkpoint/").is_dir():
-        p = Path(f"/checkpoint/{user}/experiments")
+    path = "/p/project/joaiml/snaebjarnarson1/mae/mae"
+    if Path(f"{path}").is_dir():
+        p = Path(f"{path}/experiments")
         p.mkdir(exist_ok=True)
         return p
     raise RuntimeError("No shared folder available")
@@ -98,7 +99,7 @@ def main():
     partition = args.partition
     kwargs = {}
     if args.use_volta32:
-        kwargs['slurm_constraint'] = 'volta32gb'
+        kwargs['slurm_constraint'] = 'dp-esb'
     if args.comment:
         kwargs['slurm_comment'] = args.comment
 

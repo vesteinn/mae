@@ -96,7 +96,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
 
 @torch.no_grad()
-def evaluate(data_loader, model, device):
+def evaluate(data_loader, model, device, write_out=None):
     criterion = torch.nn.CrossEntropyLoss()
 
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -105,26 +105,63 @@ def evaluate(data_loader, model, device):
     # switch to evaluation mode
     model.eval()
 
+    if write_out is not None:
+        out_file = open(write_out, "w")  
+        file_header = "\t".join(["file_name", "is_correct", "correct_label", "predicted_label"])
+        file_header += "\t" + "\t".join(data_loader.dataset.classes)
+        out_file.writelines(file_header + "\n")
+
+    img_idx = 0
+
+    confidence_storage = []
+
     for batch in metric_logger.log_every(data_loader, 10, header):
         images = batch[0]
         target = batch[-1]
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
-
+       
+        # For debug only
+        local_log = []
+         
         # compute output
         with torch.cuda.amp.autocast():
             output = model(images)
             loss = criterion(output, target)
+            # TODO: Remove hardcoded 200 for CUB..
+            sigmoids = torch.sigmoid(output) #[:,:200]            
+            softmaxed = torch.nn.functional.softmax(output, dim=-1)            
+            confidences = softmaxed.max(dim=-1) 
+            confidence_storage += confidences.values.tolist()
+
+        if write_out is not None:
+            for i in range(batch[0].shape[0]):
+                img_data = data_loader.dataset.imgs[img_idx]
+                file_name, label = img_data
+                assert label == target[i]
+                img_idx += 1
+                sigm = [f"{s}" for s in sigmoids[i].tolist()]
+                softm = [f"{s}" for s in softmaxed[i].tolist()]
+                argmax = sigmoids[i].argmax().item()
+                eval_record = [file_name, int(label == argmax), label, argmax]
+                eval_record += softm # sigm
+                local_log.append(eval_record)
+                entry = "\t".join(f"{s}" for s in eval_record)
+                out_file.writelines(entry+"\n")
 
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
-
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())
         metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
         metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
+    
+    if write_out is not None:
+        out_file.close()    
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
-
+    avg_conf = sum(confidence_storage) / 3000 # todo remove hardcoded
+    print(f'Average softmax of predicted class: {avg_conf}')
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
