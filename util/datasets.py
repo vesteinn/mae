@@ -29,7 +29,7 @@ def filter_dataset(dataset, keep_ratio=1):
     jpgs_samples = defaultdict(list)
    
     for idx, sample in enumerate(dataset.samples):
-        if sample[0][-3:] == "png":
+        if sample[0].endswith("newclas.jpg"):
             new_samples.append(sample)
             continue
         jpgs_samples[sample[1]].append(sample[0])
