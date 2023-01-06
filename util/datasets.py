@@ -17,13 +17,48 @@ from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 
+import random
+from collections import defaultdict
+
+
+def filter_dataset(dataset, keep_ratio=1):
+    # Remove percentage of jpgs!
+    new_samples = []
+    new_targets = []
+
+    jpgs_samples = defaultdict(list)
+   
+    for idx, sample in enumerate(dataset.samples):
+        if sample[0][-3:] == "png":
+            new_samples.append(sample)
+            continue
+        jpgs_samples[sample[1]].append(sample[0])
+    new_targets = [sample[1] for sample in new_samples]
+
+    for c_name, samples in jpgs_samples.items():
+        k = int(len(samples) * keep_ratio)
+        random.seed(0)
+        formated_samples = [(s, c_name) for s in samples]
+        randsamp = random.sample(formated_samples, k)
+        new_samples += randsamp
+        new_targets += [s[1] for s in randsamp]
+    
+    print(f"{len(new_samples)} -- {len(new_targets)}")
+    assert len(new_samples) == len(new_targets)
+    dataset.samples = new_samples
+    dataset.targets = new_targets
+    dataset.imgs = new_samples
+    return dataset
+
+
 def build_dataset(is_train, args):
     transform = build_transform(is_train, args)
 
     root = os.path.join(args.data_path, 'train' if is_train else 'val')
     dataset = datasets.ImageFolder(root, transform=transform)
 
-    print(dataset)
+    if args.keep_orig_ratio:
+        dataset = filter_dataset(dataset, keep_ratio=args.keep_orig_ratio)
 
     return dataset
 
