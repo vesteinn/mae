@@ -29,12 +29,18 @@ def filter_dataset(dataset, keep_ratio=1):
     jpgs_samples = defaultdict(list)
    
     for idx, sample in enumerate(dataset.samples):
-        if sample[0].endswith("newclas.jpg"):
+        # The augmentations are with
+        #if not sample[0].endswith("newclas.jpg"):
+        is_fake = False
+        if "bird" == sample[0].split("/")[-1].split("_")[1]:
+           is_fake = True
+        
+        if is_fake:
             new_samples.append(sample)
-            continue
-        jpgs_samples[sample[1]].append(sample[0])
+        else:
+            jpgs_samples[sample[1]].append(sample[0])
+    
     new_targets = [sample[1] for sample in new_samples]
-
     for c_name, samples in jpgs_samples.items():
         k = int(len(samples) * keep_ratio)
         random.seed(0)
@@ -42,7 +48,7 @@ def filter_dataset(dataset, keep_ratio=1):
         randsamp = random.sample(formated_samples, k)
         new_samples += randsamp
         new_targets += [s[1] for s in randsamp]
-    
+   
     print(f"{len(new_samples)} -- {len(new_targets)}")
     assert len(new_samples) == len(new_targets)
     dataset.samples = new_samples
@@ -56,7 +62,7 @@ def build_dataset(is_train, args):
 
     root = os.path.join(args.data_path, 'train' if is_train else 'val')
     dataset = datasets.ImageFolder(root, transform=transform)
-
+    
     if args.keep_orig_ratio:
         dataset = filter_dataset(dataset, keep_ratio=args.keep_orig_ratio)
 

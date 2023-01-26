@@ -323,9 +323,10 @@ def main(args):
             args=args
         )
         if args.output_dir:
-            misc.save_model(
-                args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                loss_scaler=loss_scaler, epoch=epoch)
+            pass
+            #misc.save_model(
+            #    args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+            #    loss_scaler=loss_scaler, epoch=epoch)
 
         test_stats = evaluate(data_loader_val, model, device, args.write_eval_file)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")

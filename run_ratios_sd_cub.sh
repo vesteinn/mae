@@ -1,10 +1,8 @@
-#for rat in 0; do
-# 0.001 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9; do
 for rat in 0 0.1 0.3 0.5 0.7 0.8 0.9 1.0; do
 
-JOB_DIR="augmentation_ratio_large_${rat}_cub_gen_finetune"
+JOB_DIR="augmentation_ratio_large_${rat}_cub_gen_finetune_sd_only_filterfix"
 PRETRAIN_CHKPT="mae_pretrain_vit_large.pth"
-DATA_DIR="../cub_w_gen_bsz5"
+DATA_DIR="../cub_w_sd"
 
 python submitit_finetune.py \
     --job_dir ${JOB_DIR} \
